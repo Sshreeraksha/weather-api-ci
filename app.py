@@ -1,82 +1,101 @@
 from flask import Flask, request, jsonify
-import requests
 
 app = Flask(__name__)
 
-def fetch_weather(city):
-    url = f"https://wttr.in/{city}?format=j1"
-    data = requests.get(url).json()
-    current = data['current_condition'][0]
-    astronomy = data['weather'][0]['astronomy'][0]
-    return current, astronomy
+# Function to generate weather description
+def get_description(temp):
+    t = int(temp)
+    if t < 15:
+        return "Cold and Breezy"
+    elif t < 25:
+        return "Pleasant Weather"
+    else:
+        return "Hot and Sunny"
 
 @app.route('/weather')
-def get_weather_json():
-    city = request.args.get("city", "London")
-    current, astronomy = fetch_weather(city)
+def weather_api():
+    city = request.args.get("city")
+    
+    if not city:
+        return jsonify({"error": "City parameter is missing!"}), 400
+
+    temperature = "25"
+    humidity = "60%"
+    wind = "12 km/h"
+    description = get_description(temperature)
+
     return jsonify({
         "city": city,
-        "temperature": current["temp_C"],
-        "humidity": current["humidity"],
-        "feels_like": current["FeelsLikeC"],
-        "wind_speed": current["windspeedKmph"],
-        "description": current["weatherDesc"][0]["value"],
-        "sunrise": astronomy["sunrise"],
-        "sunset": astronomy["sunset"]
+        "temperature": temperature,
+        "humidity": humidity,
+        "wind_speed": wind,
+        "description": description,
+        "status": "success"
+    })
+
+@app.route('/weather-json')
+def weather_json_pretty():
+    city = request.args.get("city")
+    if not city:
+        city = "Unknown"
+
+    temperature = "25"
+    humidity = "60%"
+    wind = "12 km/h"
+    description = get_description(temperature)
+
+    return jsonify({
+        "weather_report": {
+            "city": city,
+            "temperature": temperature,
+            "humidity": humidity,
+            "wind_speed": wind,
+            "description": description
+        }
     })
 
 @app.route('/weather-ui')
-def get_weather_ui():
-    city = request.args.get("city", "London")
-    current, astronomy = fetch_weather(city)
+def weather_ui():
+    city = request.args.get("city", "Unknown")
+    temperature = "25"
+    humidity = "60%"
+    wind = "12 km/h"
+    description = get_description(temperature)
 
-    icon = current["weatherDesc"][0]["value"]
-    temp = current["temp_C"]
-    humidity = current["humidity"]
-    feels = current["FeelsLikeC"]
-    wind = current["windspeedKmph"]
-    sunrise = astronomy["sunrise"]
-    sunset = astronomy["sunset"]
-
-    html = f"""
+    return f"""
     <html>
-    <head>
-    <title>Weather for {city}</title>
-    <style>
-        body {{
-            background: linear-gradient(135deg, #6dd5fa, #2980b9);
-            font-family: Arial, sans-serif;
-            color: white;
-            text-align: center;
-            padding-top: 40px;
-        }}
-        .card {{
-            background: rgba(255,255,255,0.12);
-            padding: 25px;
-            border-radius: 20px;
-            width: 420px;
-            margin: auto;
-            box-shadow: 0px 6px 18px rgba(0,0,0,0.25);
-        }}
-        h1 {{ font-size: 28px; margin-bottom: 6px; }}
-        p  {{ font-size: 18px; margin: 6px 0; }}
-    </style>
-    </head>
-    <body>
-    <div class="card">
-        <h1>🌤 Weather in {city}</h1>
-        <p><b>Description:</b> {icon}</p>
-        <p><b>Temperature:</b> {temp}°C</p>
-        <p><b>Humidity:</b> {humidity}%</p>
-        <p><b>Feels Like:</b> {feels}°C</p>
-        <p><b>Wind Speed:</b> {wind} km/h</p>
-        <p><b>Sunrise:</b> {sunrise}</p>
-        <p><b>Sunset:</b> {sunset}</p>
-    </div>
-    </body>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial;
+                    background: #f3f4f6;
+                    padding: 20px;
+                }}
+                .card {{
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    width: 300px;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                }}
+                h1 {{
+                    color: #2a2a2a;
+                }}
+            </style>
+        </head>
+
+        <body>
+            <div class="card">
+                <h1>Weather Report</h1>
+                <p><b>City:</b> {city}</p>
+                <p><b>Temperature:</b> {temperature}°C</p>
+                <p><b>Humidity:</b> {humidity}</p>
+                <p><b>Wind Speed:</b> {wind}</p>
+                <p><b>Description:</b> {description}</p>
+            </div>
+        </body>
     </html>
     """
-    return html
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
